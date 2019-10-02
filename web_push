@@ -1,0 +1,27 @@
+#!/bin/bash
+# sh web_push.sh
+
+SVN="tags/production/public"
+BASE_SVN_PATH="https://admin.alquadri.co.uk/subversion/project001"
+BASE_DEP_PATH="/home/vhosts/alquadri.co.uk/httpdocs/delivery"
+
+THISHOST=$(hostname)
+
+/usr/bin/mysql --host=000.00.00.000 --user=alquadri --password=alquadri -e "SELECT rollout_scripts_id, url from alquadri_import.rollout_scripts where $THISHOST = 0 ;" | while read rollout_scripts_id url; do
+
+	if [[ "$url" == "url" ]]; then
+		continue
+	fi
+
+    #echo "Deploying: $BASE_SVN_PATH/$SVN/$url  to $BASE_DEP_PATH/$url"
+
+    #Rolling out the file
+    /usr/bin/svn --username=username --password=password --no-auth-cache --non-interactive --force --quiet export $BASE_SVN_PATH/$SVN/$url $BASE_DEP_PATH/$url
+
+    # change file ownership to apache
+     /bin/chown -R apache.apache $BASE_DEP_PATH/$url
+
+    # update the status to completed
+	/usr/bin/mysql --host=000.00.00.000 --user=alquadri --password=alquadri -e "update alquadri_import.rollout_scripts set $THISHOST = 1 where rollout_scripts_id = $rollout_scripts_id ;"
+
+done
